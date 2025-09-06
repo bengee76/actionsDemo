@@ -12,6 +12,7 @@ jobs:
     outputs:
       environment: ${{ steps.env.outputs.environment }}
       should-deploy: ${{ steps.env.outputs.should-deploy }}
+      should-destroy: ${{ steps.env.outputs.should-destroy }}
     steps:
       - name: Set environment
         id: env
