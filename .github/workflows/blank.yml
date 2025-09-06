@@ -34,16 +34,17 @@ jobs:
   build-docker:
     runs-on: ubuntu-latest
     needs: determine-environment
+    if: needs.determine-environment.outputs.should-deploy == 'true'
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: echo
-        run: |
-          echo "building docker for ${{ needs.determine-environment.outputs.environment }}"
+    - name: Checkout code
+      uses: actions/checkout@v3
+    - name: echo
+      run: |
+        echo "building docker for ${{ needs.determine-environment.outputs.environment }}"
   test:
     runs-on: ubuntu-latest
     needs: [ build-docker, determine-environment ]
+    if: needs.determine-environment.outputs.should-deploy == 'true'
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -54,6 +55,7 @@ jobs:
   push-docker:
     runs-on: ubuntu-latest
     needs: [ test, determine-environment ]
+    if: needs.determine-environment.outputs.should-deploy == 'true'
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
