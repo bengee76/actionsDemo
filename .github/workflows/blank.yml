@@ -2,9 +2,9 @@ name: Demo
 
 on:
   push:
-    branches: [ "main", "develop" ]
+    branches: [ "main", "staging" ]
   pull_request:
-    branches: [ "develop" ]
+    branches: [ "staging" ]
 
 jobs:
   determine-environment:
@@ -30,36 +30,36 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Set up Node.js
+      - name: echo
         run: |
           echo "building docker for ${{ needs.determine-environment.outputs.environment }}"
   test:
     runs-on: ubuntu-latest
-    needs: build-docker
+    needs: [ build-docker, determine-environment ]
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Set up Node.js
+      - name: echo
         run: |
           echo "testing for ${{ needs.determine-environment.outputs.environment }}"
   push-docker:
     runs-on: ubuntu-latest
-    needs: test
+    needs: [ test, determine-environment ]
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Set up Node.js
+      - name: echo
         run: |
           echo "push docker to registry for ${{ needs.determine-environment.outputs.environment }}"
   deploy:
     runs-on: ubuntu-latest
-    needs: push-docker
+    needs: [ push-docker, determine-environment ]
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Set up Node.js
+      - name: echo
         run: |
           echo "deploying to ${{ needs.determine-environment.outputs.environment }}"
