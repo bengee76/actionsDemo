@@ -1,3 +1,2 @@
 # actionsDemo
-testing GA
-It should destroy staging now
+Demo workflow for testing
