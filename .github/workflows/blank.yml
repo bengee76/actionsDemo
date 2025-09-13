@@ -203,7 +203,11 @@ jobs:
     runs-on: ubuntu-latest
     env:
       ENVIRONMENT: ${{ needs.determine-environment.outputs.environment }}
-    if: github.event.action == 'closed' && github.base_ref == 'staging'
+    if: ${{ or(
+        needs.deploy-apply.result == 'failure',
+        needs.pull-images.result == 'failure',
+        needs.integration-tests.result == 'failure'
+        ) }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
