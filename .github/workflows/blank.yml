@@ -186,7 +186,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       ENVIRONMENT: ${{ needs.determine-environment.outputs.environment }}
-    if: needs.deploy-apply.result == 'failure' || needs.pull-images.result == 'failure' || needs.integration-tests.result == 'failure'
+    if: always() && (needs.deploy-apply.result == 'failure' || needs.pull-images.result == 'failure' || needs.integration-tests.result == 'failure')
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
@@ -203,11 +203,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       ENVIRONMENT: ${{ needs.determine-environment.outputs.environment }}
-    if: ${{ or(
-        needs.deploy-apply.result == 'failure',
-        needs.pull-images.result == 'failure',
-        needs.integration-tests.result == 'failure'
-        ) }}
+    if: github.event.action == 'closed' && github.base_ref == 'staging'
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
