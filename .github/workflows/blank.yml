@@ -48,8 +48,8 @@ jobs:
         with:
           args: --disable-linter YAML_PRETTIER --disable-linter MARKDOWN_PRETTIER --jscpd-threshold 20
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          DISABLE_LINTERS: YAML_PRETTIER,MARKDOWN_PRETTIER
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}   
+          DISABLE_LINTERS: YAML_PRETTIER,MARKDOWN_PRETTIER #Temporary
           JSCPD_THRESHOLD: 20
           
   
@@ -159,6 +159,10 @@ jobs:
 
       - name: Pull images from ECR into instances via Ansible
         run: echo "Pulling images from ECR"
+
+      - name: Fail the step for testing #for testing
+        if: needs.determine-environment.outputs.environment == "production"
+        run: exit 1
 
   integration-tests:
     needs: [ determine-environment, pull-images ] 
