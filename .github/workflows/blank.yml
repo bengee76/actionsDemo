@@ -30,7 +30,7 @@ jobs:
     if: github.event.action == 'opened'
     permissions:
       statuses: write
-      
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
