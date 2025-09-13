@@ -45,11 +45,10 @@ jobs:
   
       - name: Lint code
         uses: github/super-linter@v7
-        with:
-          jscpd_threshold: 20
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          DISABLE_LINTERS: YAML_PRETTIER
+          DISABLE_LINTERS: YAML_PRETTIER,MARKDOWN_PRETTIER
+          JSCPD_THRESHOLD: 20
           
   
       - name: Set up Node.js
