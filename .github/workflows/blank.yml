@@ -160,10 +160,6 @@ jobs:
       - name: Pull images from ECR into instances via Ansible
         run: echo "Pulling images from ECR"
 
-      - name: Fail the step for testing #for testing
-        if: needs.determine-environment.outputs.environment == 'production'
-        run: exit 1
-
   integration-tests:
     needs: [ determine-environment, pull-images ] 
     runs-on: ubuntu-latest
@@ -186,7 +182,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       ENVIRONMENT: ${{ needs.determine-environment.outputs.environment }}
-    if: always() && (needs.deploy-apply.result == 'failure' || needs.pull-images.result == 'failure' || needs.integration-tests.result == 'failure')
+    if: always() && needs.determine-environment.outputs.environment != 'production' && (needs.deploy-apply.result == 'failure' || needs.pull-images.result == 'failure' || needs.integration-tests.result == 'failure')
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
