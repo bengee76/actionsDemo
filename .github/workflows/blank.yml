@@ -161,7 +161,7 @@ jobs:
         run: echo "Pulling images from ECR"
 
       - name: Fail the step for testing #for testing
-        if: needs.determine-environment.outputs.environment == "production"
+        if: needs.determine-environment.outputs.environment == 'production'
         run: exit 1
 
   integration-tests:
