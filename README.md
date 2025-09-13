@@ -1,3 +1,2 @@
 # actionsDemo
-testing GA
-final demo
+Demo workflow for testing
