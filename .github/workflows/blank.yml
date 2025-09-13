@@ -25,7 +25,8 @@ jobs:
   build:
     needs: determine-environment
     runs-on: ubuntu-latest
-    environment: ${{ needs.determine-environment.outputs.environment }}
+    env:
+      ENVIRONMENT: ${{ needs.determine-environment.outputs.environment }}
     if: github.event.action == 'opened'
     steps:
       - name: Checkout code
@@ -80,7 +81,8 @@ jobs:
   deploy-plan:
     needs: [ determine-environment, build ] 
     runs-on: ubuntu-latest
-    environment: ${{ needs.determine-environment.outputs.environment }}
+    env:
+      ENVIRONMENT: ${{ needs.determine-environment.outputs.environment }}
     if: github.event.action == 'opened'
     steps:
       - name: Checkout code
@@ -98,7 +100,9 @@ jobs:
   deploy-apply:
     needs: [ determine-environment, deploy-plan ] 
     runs-on: ubuntu-latest
-    environment: ${{ needs.determine-environment.outputs.environment }}
+    environment:  plan 
+    env:
+      ENVIRONMENT: ${{ needs.determine-environment.outputs.environment }}
     if: github.event.action == 'opened'
     steps:
       - name: Checkout code
@@ -116,7 +120,8 @@ jobs:
   pull-images:
     needs: [ determine-environment, deploy-apply ] 
     runs-on: ubuntu-latest
-    environment: ${{ needs.determine-environment.outputs.environment }}
+    env:
+      ENVIRONMENT: ${{ needs.determine-environment.outputs.environment }}    
     if: github.event.action == 'opened'
     steps:
       - name: Checkout code
@@ -137,7 +142,8 @@ jobs:
   integration-tests:
     needs: [ determine-environment, pull-images ] 
     runs-on: ubuntu-latest
-    environment: ${{ needs.determine-environment.outputs.environment }}
+    env:
+      ENVIRONMENT: ${{ needs.determine-environment.outputs.environment }}
     if: github.event.action == 'opened'
     steps:
       - name: Checkout code
@@ -150,10 +156,11 @@ jobs:
         run: echo "Running integration tests against deployed infrastructure"
 
   destroy-on-failure:
-    needs: [ determine-environment ] 
+    needs: [ determine-environment, deploy-apply, pull-images, integration-tests ] 
     runs-on: ubuntu-latest
-    environment: ${{ needs.determine-environment.outputs.environment }}
-    if: needs.deploy.result == 'failure'
+    env:
+      ENVIRONMENT: ${{ needs.determine-environment.outputs.environment }}
+    if: needs.deploy-apply.result == 'failure' || needs.pull-images.result == 'failure' || needs.integration-tests.result == 'failure'
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
@@ -167,7 +174,8 @@ jobs:
   destroy-on-close:
     needs: determine-environment
     runs-on: ubuntu-latest
-    environment: ${{ needs.determine-environment.outputs.environment }}
+    env:
+      ENVIRONMENT: ${{ needs.determine-environment.outputs.environment }}
     if: github.event.action == 'closed' && github.base_ref == 'staging'
     steps:
       - name: Checkout code
