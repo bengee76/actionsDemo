@@ -1,87 +1,180 @@
 name: Demo
 
-on:
-  push:
-    branches: [ "main", "staging" ]
+on: 
   pull_request:
-    branches: [ "staging" ]
+    types: [opened, closed]
+    branches: [ "staging", "production" ]
 
 jobs:
   determine-environment:
     runs-on: ubuntu-latest
     outputs:
       environment: ${{ steps.env.outputs.environment }}
-      should-deploy: ${{ steps.env.outputs.should-deploy }}
-      should-destroy: ${{ steps.env.outputs.should-destroy }}
     steps:
       - name: Set environment
         id: env
         run: |
-          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+          if [ "${{ github.base_ref }}" = "main" ]; then
             echo "environment=production" >> $GITHUB_OUTPUT
-            echo "should-deploy=true" >> $GITHUB_OUTPUT
-            echo "should-destroy=false" >> $GITHUB_OUTPUT
-          elif [ "${{ github.ref }}" = "refs/heads/staging" ]; then
+          elif [ "${{ github.base_ref }}" = "staging" ];
             echo "environment=staging" >> $GITHUB_OUTPUT
-            echo "should-deploy=false" >> $GITHUB_OUTPUT
-            echo "should-destroy=true" >> $GITHUB_OUTPUT
-          else
-            echo "environment=staging" >> $GITHUB_OUTPUT
-            echo "should-deploy=true" >> $GITHUB_OUTPUT
-            echo "should-destroy=false" >> $GITHUB_OUTPUT
           fi
-
-  build-docker:
-    runs-on: ubuntu-latest
+      - name: Show environment
+        run: echo "Environment is ${{ steps.env.outputs.environment }}"
+        
+  build:
     needs: determine-environment
-    if: needs.determine-environment.outputs.should-deploy == 'true'
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
-    - name: echo
-      run: |
-        echo "building docker for ${{ needs.determine-environment.outputs.environment }}"
-  test:
     runs-on: ubuntu-latest
-    needs: [ build-docker, determine-environment ]
-    if: needs.determine-environment.outputs.should-deploy == 'true'
+    environment: ${{ needs.determine-environment.outputs.environment }}
+    if: github.event.action == 'opened'
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v5
+      
+      - name: Lint code
+        uses: github/super-linter@v8
 
-      - name: echo
-        run: |
-          echo "testing for ${{ needs.determine-environment.outputs.environment }}"
-  push-docker:
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: '20'
+    
+      - name: Build frontend
+        run: echo "Building fronend"
+
+      - name: Unit tests frontend
+        run: echo "Testing frontend"
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: echo "Installing dependencies"
+      
+      - name: Unit tests backend
+        run: echo "Testing backend"
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build docker images
+        run: echo "Building docker images"
+
+      - name: Run docker with compose
+        run: echo "Running docker compose"
+      
+      - name: Smoke test Frontend
+        run: echo "Running smoke tests - Frontend"
+
+      - name: Smoke test Backend
+        run: echo "Running smoke tests - Backend"
+
+      - name: Integration tests with compose
+        run: echo "Running integration tests on compose"
+
+      - name: Push to ECR
+        run: echo "Pushing to ECR"
+      
+  deploy-plan:
+    needs: [ determine-environment, build ] 
     runs-on: ubuntu-latest
-    needs: [ test, determine-environment ]
-    if: needs.determine-environment.outputs.should-deploy == 'true'
+    environment: ${{ needs.determine-environment.outputs.environment }}
+    if: github.event.action == 'opened'
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v5
+      
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v5
 
-      - name: echo
-        run: |
-          echo "push docker to registry for ${{ needs.determine-environment.outputs.environment }}"
-  deploy:
+      - name: Test terraform
+        run: echo "Testing terraform"
+
+      - name: Plan terraform
+        run: echo "Planning terraform"
+  
+  deploy-apply:
+    needs: [ determine-environment, deploy-plan ] 
     runs-on: ubuntu-latest
-    needs: [ push-docker, determine-environment ]
-    if: needs.determine-environment.outputs.should-deploy == 'true'
+    environment: ${{ needs.determine-environment.outputs.environment }}
+    if: github.event.action == 'opened'
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v5
+      
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v5
 
-      - name: echo
-        run: |
-          echo "deploying to ${{ needs.determine-environment.outputs.environment }}"
-  destroy:
+      - name: Apply terraform
+        run: echo "Applying terraform"
+
+      - name: Wait for instances to be ready
+        run: echo "Waiting for instances to be ready"
+  
+  pull-images:
+    needs: [ determine-environment, deploy-apply ] 
     runs-on: ubuntu-latest
+    environment: ${{ needs.determine-environment.outputs.environment }}
+    if: github.event.action == 'opened'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+      
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v5
+
+      - name: Setup ansible
+        run: echo "Setting up Ansible"
+
+      - name: Get pool of ASG instances ips
+        run: echo "Getting pool of ASG instances ips"
+
+      - name: Pull images from ECR into instances via Ansible
+        run: echo "Pulling images from ECR"
+
+  integration-tests:
+    needs: [ determine-environment, pull-images ] 
+    runs-on: ubuntu-latest
+    environment: ${{ needs.determine-environment.outputs.environment }}
+    if: github.event.action == 'opened'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+      
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v5
+
+      - name: Run integration tests against deployed infrastructure
+        run: echo "Running integration tests against deployed infrastructure"
+
+  destroy-on-failure:
+    needs: [ determine-environment ] 
+    runs-on: ubuntu-latest
+    environment: ${{ needs.determine-environment.outputs.environment }}
+    if: needs.deploy.result == 'failure'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+      
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v5
+
+      - name: Destroy infrastructure
+        run: echo "Destroying infrastructure"
+
+  destroy-on-close:
     needs: determine-environment
-    if: needs.determine-environment.outputs.should-destroy == 'true'
+    runs-on: ubuntu-latest
+    environment: ${{ needs.determine-environment.outputs.environment }}
+    if: github.event.action == 'closed' && github.base_ref == 'staging'
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v5
+      
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v5
 
-      - name: echo
-        run: |
-          echo "destroying from ${{ needs.determine-environment.outputs.environment }}"
+      - name: Destroy infrastructure
+        run: echo "Destroying infrastructure"
