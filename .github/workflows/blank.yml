@@ -213,4 +213,3 @@ jobs:
         run: echo "Configure AWS credentials"
       - name: Destroy infrastructure
         run: echo "Destroying infrastructure"
-ucture"
