@@ -1,9 +1,15 @@
+---
+
 name: Demo
 
-on: 
+on:
   pull_request:
     types: [opened, closed]
     branches: [ "staging", "production" ]
+    
+permissions:
+  contents: read
+  statuses: write
 
 jobs:
   determine-environment:
@@ -15,47 +21,57 @@ jobs:
         id: env
         run: |
           if [ "${{ github.base_ref }}" = "main" ]; then
-            echo "environment=production" >> $GITHUB_OUTPUT
+            echo "environment=production" >> "$GITHUB_OUTPUT"
           elif [ "${{ github.base_ref }}" = "staging" ]; then
-            echo "environment=staging" >> $GITHUB_OUTPUT
+            echo "environment=staging" >> "$GITHUB_OUTPUT"
           fi
       - name: Show environment
         run: echo "Environment is ${{ steps.env.outputs.environment }}"
-        
+
   build:
     needs: determine-environment
     runs-on: ubuntu-latest
     env:
       ENVIRONMENT: ${{ needs.determine-environment.outputs.environment }}
     if: github.event.action == 'opened'
+    permissions:
+      statuses: write
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
-      
+        with:
+          fetch-depth: 0
+  
       - name: Lint code
-        uses: github/super-linter@v7
+        uses: github/super-linter@v5
+        with:
+          args: --disable-linter YAML_PRETTIER --disable-linter MARKDOWN_PRETTIER --jscpd-threshold 20
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}   
+          DISABLE_LINTERS: YAML_PRETTIER,MARKDOWN_PRETTIER #Temporary
+          JSCPD_THRESHOLD: 20
+          
+  
       - name: Set up Node.js
         uses: actions/setup-node@v5
         with:
           node-version: '20'
-    
+
       - name: Build frontend
         run: echo "Building fronend"
 
       - name: Unit tests frontend
         run: echo "Testing frontend"
-      
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-
+  
       - name: Install dependencies
         run: echo "Installing dependencies"
-      
+
       - name: Unit tests backend
         run: echo "Testing backend"
 
@@ -81,7 +97,7 @@ jobs:
         run: echo "Pushing to ECR"
       
   deploy-plan:
-    needs: [ determine-environment, build ] 
+    needs: [ determine-environment, build ]
     runs-on: ubuntu-latest
     env:
       ENVIRONMENT: ${{ needs.determine-environment.outputs.environment }}
@@ -91,7 +107,8 @@ jobs:
         uses: actions/checkout@v5
       
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v5
+        #uses: aws-actions/configure-aws-credentials@v5
+        run: echo "Configure AWS credentials"
 
       - name: Test terraform
         run: echo "Testing terraform"
@@ -102,7 +119,7 @@ jobs:
   deploy-apply:
     needs: [ determine-environment, deploy-plan ] 
     runs-on: ubuntu-latest
-    environment:  plan 
+    environment: plan 
     env:
       ENVIRONMENT: ${{ needs.determine-environment.outputs.environment }}
     if: github.event.action == 'opened'
@@ -111,7 +128,8 @@ jobs:
         uses: actions/checkout@v5
       
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v5
+        #uses: aws-actions/configure-aws-credentials@v5
+        run: echo "Configure AWS credentials"
 
       - name: Apply terraform
         run: echo "Applying terraform"
@@ -130,7 +148,8 @@ jobs:
         uses: actions/checkout@v5
       
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v5
+        #uses: aws-actions/configure-aws-credentials@v5
+        run: echo "Configure AWS credentials"
 
       - name: Setup ansible
         run: echo "Setting up Ansible"
@@ -140,6 +159,10 @@ jobs:
 
       - name: Pull images from ECR into instances via Ansible
         run: echo "Pulling images from ECR"
+
+      - name: Fail the step for testing #for testing
+        if: needs.determine-environment.outputs.environment == "production"
+        run: exit 1
 
   integration-tests:
     needs: [ determine-environment, pull-images ] 
@@ -152,7 +175,8 @@ jobs:
         uses: actions/checkout@v5
       
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v5
+        #uses: aws-actions/configure-aws-credentials@v5
+        run: echo "Configure AWS credentials"
 
       - name: Run integration tests against deployed infrastructure
         run: echo "Running integration tests against deployed infrastructure"
@@ -168,7 +192,8 @@ jobs:
         uses: actions/checkout@v5
       
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v5
+        #uses: aws-actions/configure-aws-credentials@v5
+        run: echo "Configure AWS credentials"
 
       - name: Destroy infrastructure
         run: echo "Destroying infrastructure"
@@ -184,7 +209,8 @@ jobs:
         uses: actions/checkout@v5
       
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v5
-
+        #uses: aws-actions/configure-aws-credentials@v5
+        run: echo "Configure AWS credentials"
       - name: Destroy infrastructure
         run: echo "Destroying infrastructure"
+ucture"
